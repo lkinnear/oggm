@@ -336,3 +336,71 @@ def process_cmip5_data(gdir, filesuffix='', fpath_temp=None,
     process_gcm_data(gdir, filesuffix=filesuffix, prcp=precip, temp=temp,
                      time_unit=time_units, calendar=calendar, source='CESM',
                      **kwargs)
+@entity_task(log, writes=['gcm_data', 'climate_info'])
+def process_swarm_data(gdir, filesuffix='', fpath_temp=None,
+                       fpath_precip=None, **kwargs):
+    """Read, process and store the swarm climate data data for this glacier.
+
+    It stores the data in a format that can be used by the OGGM mass balance
+    model and in the glacier directory.
+
+    Currently, this function is built for the swarm data modified from the CMIP5 command.
+
+    Parameters
+    ----------
+    filesuffix : str
+        append a suffix to the filename (useful for ensemble experiments).
+    fpath_temp : str
+        path to the temp file (default: cfg.PATHS['cmip5_temp_file'])
+    fpath_precip : str
+        path to the precip file (default: cfg.PATHS['cmip5_precip_file'])
+    **kwargs: any kwarg to be passed to ref:`process_gcm_data`
+    """
+
+
+    # Read the GCM files
+    tempds = xr.open_dataset(fpath_temp, decode_times=False)
+    precipds = xr.open_dataset(fpath_precip, decode_times=False)
+
+    with utils.ncDataset(fpath_temp, mode='r') as nc:
+        time_units = nc.variables['time'].units
+        calendar = nc.variables['time'].calendar
+        time = netCDF4.num2date(nc.variables['time'][:], time_units)
+
+    # Select for location
+    lon = gdir.cenlon
+    lat = gdir.cenlat
+
+    # Conversion of the longitude
+    if lon <= 0:
+        lon += 360
+
+    # Take the closest to the glacier
+    # Should we consider GCM interpolation?
+    temp = tempds.tas.sel(lat=lat, lon=lon, method='nearest')
+    precip = precipds.pr.sel(lat=lat, lon=lon, method='nearest')
+
+    # Time needs a set to start of month
+    time = [datetime(t.year, t.month, 1) for t in time]
+    temp['time'] = time
+    precip['time'] = time
+
+    temp.lon.values = temp.lon if temp.lon <= 180 else temp.lon - 360
+    precip.lon.values = precip.lon if precip.lon <= 180 else precip.lon - 360
+
+
+    if temp.time[0].dt.month != 1:
+        raise ValueError('We expect the files to start in January!')
+
+    ny, r = divmod(len(temp), 12)
+    assert r == 0
+
+
+    tempds.close()
+    precipds.close()
+
+    # Here:
+    # - time_unit='days since 1870-01-15 12:00:00'
+    # - calendar='standard'
+    process_gcm_data(gdir, filesuffix=filesuffix, prcp=precip, temp=temp,
+                     time_unit=time_units, calendar=calendar, **kwargs)
