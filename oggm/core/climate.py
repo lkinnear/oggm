@@ -974,25 +974,35 @@ def local_t_star(gdir, *, ref_df=None, tstar=None, bias=None):
 
     # mustar is taking calving into account (units of specific MB)
     mustar = (np.mean(prcp_yr) - cmb) / np.mean(temp_yr)
-    if not np.isfinite(mustar):
-        raise MassBalanceCalibrationError('{} has a non finite '
-                                          'mu'.format(gdir.rgi_id))
+    if cfg.PARAMS['swarm_mu_method']:
+        if not np.isfinite(mustar):
+            mustar = (cfg.PARAMS['swarm_mu'])
+
+            print('{} defaulting to a generic mu ({}) since it is infinite'.format(gdir.rgi_id, mustar))
+        if not (cfg.PARAMS['min_mu_star'] <= mustar <= cfg.PARAMS['max_mu_star']):
+            mustar = (cfg.PARAMS['swarm_mu'])
+
+            print('{} defaulting to a generic mu ({}) since outside the range'.format(gdir.rgi_id, mustar))
+
+    # if not np.isfinite(mustar):
+    #     raise MassBalanceCalibrationError('{} has a non finite '
+    #                                       'mu'.format(gdir.rgi_id))
 
     # Clip it?
     if cfg.PARAMS['clip_mu_star']:
         mustar = utils.clip_min(mustar, 0)
 
     # If mu out of bounds, raise
-    if not (cfg.PARAMS['min_mu_star'] <= mustar <= cfg.PARAMS['max_mu_star']):
-        raise MassBalanceCalibrationError('{}: mu* out of specified bounds: '
-                                          '{:.2f}'.format(gdir.rgi_id, mustar))
+    # if not (cfg.PARAMS['min_mu_star'] <= mustar <= cfg.PARAMS['max_mu_star']):
+    #     raise MassBalanceCalibrationError('{}: mu* out of specified bounds: '
+    #                                       '{:.2f}'.format(gdir.rgi_id, mustar))
 
     # Scalars in a small dict for later
     df = dict()
     df['rgi_id'] = gdir.rgi_id
     df['t_star'] = int(tstar)
     df['bias'] = bias
-    df['mu_star_glacierwide'] = mustar
+    df['mu_star_glacierwide'] = (mustar)
     gdir.write_json(df, 'local_mustar')
 
 
@@ -1152,6 +1162,11 @@ def mu_star_calibration(gdir):
         fl.mu_star_is_valid = False
 
     force_mu = 0 if df['mu_star_glacierwide'] == 0 else None
+    #Added in for swarm ovveride
+    if df['mu_star_glacierwide'] == cfg.PARAMS['swarm_mu']:
+        force_mu = df['mu_star_glacierwide']
+        print('Forcing mu during calibration')
+
 
     # Let's go
     _recursive_mu_star_calibration(gdir, fls, t_star, force_mu=force_mu)
@@ -1182,15 +1197,15 @@ def mu_star_calibration(gdir):
     rho = cfg.PARAMS['ice_density']
     aflux = fls[-1].flux[-1] * 1e-9 / rho * gdir.grid.dx**2
     # If not marine and a bit far from zero, warning
-    cmb = calving_mb(gdir)
-    if cmb == 0 and not np.allclose(fls[-1].flux[-1], 0., atol=0.01):
-        log.info('(%s) flux should be zero, but is: '
-                 '%.4f km3 ice yr-1', gdir.rgi_id, aflux)
+    # cmb = calving_mb(gdir)
+    # if cmb == 0 and not np.allclose(fls[-1].flux[-1], 0., atol=0.01):
+    #     log.info('(%s) flux should be zero, but is: '
+    #              '%.4f km3 ice yr-1', gdir.rgi_id, aflux)
     # If not marine and quite far from zero, error
-    if cmb == 0 and not np.allclose(fls[-1].flux[-1], 0., atol=1):
-        msg = ('({}) flux should be zero, but is: {:.4f} km3 ice yr-1'
-               .format(gdir.rgi_id, aflux))
-        raise MassBalanceCalibrationError(msg)
+    # if cmb == 0 and not np.allclose(fls[-1].flux[-1], 0., atol=1):
+    #     msg = ('({}) flux should be zero, but is: {:.4f} km3 ice yr-1'
+    #            .format(gdir.rgi_id, aflux))
+    #     raise MassBalanceCalibrationError(msg)
     gdir.write_pickle(fls, 'inversion_flowlines')
 
     # Store diagnostics

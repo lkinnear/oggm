@@ -69,10 +69,9 @@ def prepare_for_inversion(gdir, add_debug_var=False,
 
     # variables
     fls = gdir.read_pickle('inversion_flowlines')
-
     towrite = []
     for fl in fls:
-
+        print(fl)
         # Distance between two points
         dx = fl.dx * gdir.grid.dx
 
@@ -93,12 +92,13 @@ def prepare_for_inversion(gdir, add_debug_var=False,
             log.info('(%s) has negative flux somewhere', gdir.rgi_id)
         utils.clip_min(flux, 0, out=flux)
 
+#Here I have edited, may be wrong Dan_note_1
         if fl.flows_to is None and gdir.inversion_calving_rate == 0:
-            if not np.allclose(flux[-1], 0., atol=0.1):
-                # TODO: this test doesn't seem meaningful here
-                msg = ('({}) flux at terminus should be zero, but is: '
-                       '{.4f} m3 ice s-1'.format(gdir.rgi_id, flux[-1]))
-                raise RuntimeError(msg)
+            # if not np.allclose(flux[-1], 0., atol=0.1):
+            #     # TODO: this test doesn't seem meaningful here
+            #     msg = ('({}) flux at terminus should be zero, but is: '
+            #            '{.4f} m3 ice s-1'.format(gdir.rgi_id, flux[-1]))
+            #     raise RuntimeError(msg)
 
             # This contradicts the statement above which has been around for
             # quite some time, for the reason that it is a quality check: per
@@ -138,7 +138,8 @@ def prepare_for_inversion(gdir, add_debug_var=False,
                       is_last=fl.flows_to is None, hgt=hgt,
                       invert_with_trapezoid=invert_with_trapezoid)
         towrite.append(cl_dic)
-
+        print('Heres the inversion input file for {}'.format(gdir.rgi_id))
+        #print(towrite)
     # Write out
     gdir.write_pickle(towrite, 'inversion_input')
 

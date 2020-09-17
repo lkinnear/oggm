@@ -492,6 +492,8 @@ def initialize_minimal(file=None, logging_level='INFO', params=None):
     PARAMS['calving_use_limiter'] = cp.as_bool('calving_use_limiter')
     k = 'error_when_glacier_reaches_boundaries'
     PARAMS[k] = cp.as_bool(k)
+    PARAMS['swarm_mu_method'] = cp.as_bool('swarm_mu_method')
+
 
     # Climate
     PARAMS['baseline_climate'] = cp['baseline_climate'].strip().upper()
@@ -508,6 +510,9 @@ def initialize_minimal(file=None, logging_level='INFO', params=None):
     PARAMS['use_bias_for_run'] = cp.as_bool('use_bias_for_run')
     k = 'free_board_marine_terminating'
     PARAMS[k] = [float(vk) for vk in cp.as_list(k)]
+
+    #Mu star stuff
+    PARAMS['swarm_mu'] = cp.as_float('swarm_mu')
 
     # Inversion
     k = 'use_shape_factor_for_inversion'
@@ -533,7 +538,7 @@ def initialize_minimal(file=None, logging_level='INFO', params=None):
            'use_shape_factor_for_fluxbasedmodel', 'baseline_climate',
            'calving_line_extension', 'use_kcalving_for_run', 'lru_maxsize',
            'free_board_marine_terminating', 'use_kcalving_for_inversion',
-           'error_when_glacier_reaches_boundaries']
+           'error_when_glacier_reaches_boundaries', 'swarm_mu_method']
     for k in ltr:
         cp.pop(k, None)
 
