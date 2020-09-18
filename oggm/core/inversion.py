@@ -71,7 +71,7 @@ def prepare_for_inversion(gdir, add_debug_var=False,
     fls = gdir.read_pickle('inversion_flowlines')
     towrite = []
     for fl in fls:
-        print(fl)
+        #print(fl)
         # Distance between two points
         dx = fl.dx * gdir.grid.dx
 
@@ -138,7 +138,7 @@ def prepare_for_inversion(gdir, add_debug_var=False,
                       is_last=fl.flows_to is None, hgt=hgt,
                       invert_with_trapezoid=invert_with_trapezoid)
         towrite.append(cl_dic)
-        print('Heres the inversion input file for {}'.format(gdir.rgi_id))
+        #print('Heres the inversion input file for {}'.format(gdir.rgi_id))
         #print(towrite)
     # Write out
     gdir.write_pickle(towrite, 'inversion_input')

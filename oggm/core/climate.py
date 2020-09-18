@@ -1041,8 +1041,8 @@ def _recursive_mu_star_calibration(gdir, fls, t_star, first_call=True,
     _, temp, prcp = mb_yearly_climate_on_height(gdir, heights,
                                                 year_range=yr_range,
                                                 flatten=False)
-
-    if force_mu is None:
+#So basically usually trys to opimize finding mu but we can skip this dan_note_2
+    if force_mu is None and cfg.PARAMS['swarm_mu_method']:
         try:
             mu_star = optimization.brentq(_mu_star_per_minimization,
                                           cfg.PARAMS['min_mu_star'],
@@ -1165,7 +1165,7 @@ def mu_star_calibration(gdir):
     #Added in for swarm ovveride
     if df['mu_star_glacierwide'] == cfg.PARAMS['swarm_mu']:
         force_mu = df['mu_star_glacierwide']
-        print('Forcing mu during calibration')
+        #print('Forcing mu during calibration')
 
 
     # Let's go
