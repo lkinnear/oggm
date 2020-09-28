@@ -365,7 +365,7 @@ def process_swarm_data(gdir, filesuffix='', fpath_temp=None,
     with utils.ncDataset(fpath_temp, mode='r') as nc:
         time_units = nc.variables['time'].units
         calendar = nc.variables['time'].calendar
-        time = netCDF4.num2date(nc.variables['time'][:], time_units)
+        time = netCDF4.num2date(nc.variables['time'][:], time_units,calendar=calendar)
 
     # Select for location
     lon = gdir.cenlon
@@ -403,4 +403,4 @@ def process_swarm_data(gdir, filesuffix='', fpath_temp=None,
     # - time_unit='days since 1870-01-15 12:00:00'
     # - calendar='standard'
     process_gcm_data(gdir, filesuffix=filesuffix, prcp=precip, temp=temp,
-                     time_unit=time_units, calendar=calendar, **kwargs)
+                     time_unit=time_units,year_range=('1971', '1990'), calendar=calendar, **kwargs)
