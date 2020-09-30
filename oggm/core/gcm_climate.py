@@ -338,7 +338,7 @@ def process_cmip5_data(gdir, filesuffix='', fpath_temp=None,
                      **kwargs)
 @entity_task(log, writes=['gcm_data', 'climate_info'])
 def process_swarm_data(gdir, filesuffix='', fpath_temp=None,
-                       fpath_precip=None, **kwargs):
+                       fpath_precip=None, gcm_anomaly_range=('1961','1990'), **kwargs):
     """Read, process and store the swarm climate data data for this glacier.
 
     It stores the data in a format that can be used by the OGGM mass balance
@@ -351,9 +351,11 @@ def process_swarm_data(gdir, filesuffix='', fpath_temp=None,
     filesuffix : str
         append a suffix to the filename (useful for ensemble experiments).
     fpath_temp : str
-        path to the temp file (default: cfg.PATHS['cmip5_temp_file'])
+        path to the temp file
     fpath_precip : str
-        path to the precip file (default: cfg.PATHS['cmip5_precip_file'])
+        path to the precip file
+    gcm_anomaly_range: the range over which to apply the anomaly
+
     **kwargs: any kwarg to be passed to ref:`process_gcm_data`
     """
 
@@ -399,8 +401,6 @@ def process_swarm_data(gdir, filesuffix='', fpath_temp=None,
     tempds.close()
     precipds.close()
 
-    # Here:
-    # - time_unit='days since 1870-01-15 12:00:00'
-    # - calendar='standard'
+
     process_gcm_data(gdir, filesuffix=filesuffix, prcp=precip, temp=temp,
-                     time_unit=time_units,year_range=('1971', '1990'), calendar=calendar, **kwargs)
+                     time_unit=time_units,year_range=gcm_anomaly_range, calendar=calendar, **kwargs)
