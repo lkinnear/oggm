@@ -58,7 +58,7 @@ from oggm import __version__
 from oggm.utils._funcs import (calendardate_to_hydrodate, date_to_floatyear,
                                tolist, filter_rgi_name, parse_rgi_meta,
                                haversine, multipolygon_to_polygon)
-from oggm.utils._downloads import (get_demo_file, get_wgms_files,
+from oggm.utils._downloads import (get_demo_file, get_wgms_files,get_geodetic_files,
                                    get_rgi_glacier_entities)
 from oggm import cfg
 from oggm.exceptions import InvalidParamsError, InvalidWorkflowError
@@ -2266,7 +2266,7 @@ class GlacierDirectory(object):
             time = pd.DatetimeIndex(time)
             y0 = time[0].year
             y1 = time[-1].year
-        
+
         if time_unit is None:
             # http://pandas.pydata.org/pandas-docs/stable/timeseries.html
             # #timestamp-limitations
@@ -2294,7 +2294,7 @@ class GlacierDirectory(object):
             nc.author_info = 'Open Global Glacier Model'
 
             timev = nc.createVariable('time', 'i4', ('time',))
-            
+
             tatts = {'units': time_unit}
             if calendar is None:
                 calendar = 'standard'
@@ -2450,6 +2450,67 @@ class GlacierDirectory(object):
             out = self._mbprofdf
         out.columns = [float(c) for c in out.columns]
         return out.dropna(axis=1, how='all').dropna(axis=0, how='all')
+
+    def set_ref_mb_data_geodetic(self, mb_df=None, folpath=None, file=None):
+        """Adds reference mass-balance data to this glacier.
+
+        The format should be a dataframe with the years as index and
+        'ANNUAL_BALANCE' as values in mm yr-1.
+        """
+
+        if self.is_tidewater:
+            log.warning('You are trying to set MB data on a tidewater glacier!'
+                        ' These data will be ignored by the MB model '
+                        'calibration routine.')
+
+        if mb_df is None:
+
+            flink, mbdatadir = get_geodetic_files(geodetic_folder_path=folpath, geodetic_filename=file)
+            c = 'RGI{}0_ID'.format(self.rgi_version[0])
+            wid = flink.loc[flink[c] == self.rgi_id]
+            if len(wid) == 0:
+                raise RuntimeError('Not a reference glacier!')
+            wid = wid.WGMS_ID.values[0]
+
+            # file
+            reff = os.path.join(mbdatadir,
+                                'mbdata_WGMS-{:05d}.csv'.format(wid))
+            # list of years
+            mb_df = pd.read_csv(reff).set_index('YEAR')
+
+        # Quality checks
+        if 'ANNUAL_BALANCE' not in mb_df:
+            raise InvalidParamsError('Need an "ANNUAL_BALANCE" column in the '
+                                     'dataframe.')
+        if not mb_df.index.is_integer():
+            raise InvalidParamsError('The index needs to be integer years')
+
+        mb_df.index.name = 'YEAR'
+        self._mbdf = mb_df
+
+    def get_ref_mb_data_geodetic(self,folder_path=None ,filename=None):
+        """Get the reference mb data from geodetic (for some glaciers only!).
+
+        Raises an Error if it isn't a reference glacier at all.
+        """
+
+        if self._mbdf is None:
+            self.set_ref_mb_data_geodetic(folpath=folder_path,file=filename)
+
+        # logic for period
+        ci = self.get_climate_info()
+        if 'baseline_hydro_yr_0' not in ci:
+            raise InvalidWorkflowError('Please process some climate data '
+                                       'before call')
+        y0 = ci['baseline_hydro_yr_0']
+        y1 = ci['baseline_hydro_yr_1']
+        if len(self._mbdf) > 1:
+            out = self._mbdf.loc[y0:y1]
+        else:
+            # Some files are just empty
+            out = self._mbdf
+        return out.dropna(subset=['ANNUAL_BALANCE'])
+
 
     def get_ref_length_data(self):
         """Get the glacier length data from P. Leclercq's data base.
@@ -2859,3 +2920,7 @@ def base_dir_to_tar(base_dir=None, delete=True):
 
     for dirname in to_delete:
         shutil.rmtree(dirname)
+
+
+
+
